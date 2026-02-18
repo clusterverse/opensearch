@@ -8,7 +8,7 @@ path.data: {{ osearch_data_dir }}
 path.logs: {{ osearch_log_dir }}
 
 network.bind_host: {{ osearch_network_bind_host }}
-network.publish_host: _site_
+network.publish_host: {{ ansible_host }}
 
 node.roles:
 {%- for group_name in group_names if group_name in ['data', 'ingest', 'remote_cluster_client'] %}
@@ -21,10 +21,6 @@ node.roles:
   - master
 {%- endif %}
 
-{% if osearch_extra_config %}
-{{ osearch_extra_config | to_nice_yaml }}
-{%- endif -%}
-
 {% if osearch_extra_config['cluster.routing.allocation.awareness.attributes'] is defined and osearch_extra_config['cluster.routing.allocation.awareness.attributes'] == 'zone' %}
 node.attr.zone: {{ hostvars[inventory_hostname]['regionzone'] }}
 {%- endif %}
@@ -32,11 +28,15 @@ node.attr.zone: {{ hostvars[inventory_hostname]['regionzone'] }}
 {% if inventory_hostname == master_eligible_nodes[0]['hostname'] -%}
 # (https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-discovery-bootstrap-cluster.html#modules-discovery-bootstrap-cluster)
 # Technically this doesn't have to be set to all master-eligible nodes on all such nodes, if we don't mind the cluster being fault-intolerant during startup, and it's a pain to manage because it should be removed after cluster setup, and never added again.
-cluster.initial_master_nodes: {{ inventory_hostname }}
+cluster.initial_cluster_manager_nodes: {{ inventory_hostname }}
 {%- endif %}
 
 #Instead of defining discovery.seed_hosts statically here, set via a file ($OSEARCH_PATH_CONF/unicast_hosts.txt), which is automatically reloaded when changed (avoiding restarting opensearch each time).
 discovery.seed_providers: file
+
+{% if osearch_extra_config %}
+{{ osearch_extra_config | to_nice_yaml }}
+{%- endif -%}
 
 ## Prevent the "split brain" by configuring the majority of nodes (total number of master-eligible nodes / 2 + 1):
 #discovery.zen.minimum_master_nodes:
@@ -51,8 +51,9 @@ plugins.security.unsupported.restapi.allow_securityconfig_modification: true
 plugins.security.ssl.transport.pemkey_filepath: "{{ osearch_ssl_key_path | basename }}"
 plugins.security.ssl.transport.pemcert_filepath: "{{ osearch_ssl_crt_path | basename }}"
 plugins.security.ssl.transport.pemtrustedcas_filepath: "{{ osearch_ssl_ca_path | basename }}"
-plugins.security.ssl.transport.enforce_hostname_verification: true
-plugins.security.ssl.transport.resolve_hostname: false
+plugins.security.ssl.certificates_hot_reload.enabled: true
+transport.ssl.enforce_hostname_verification: true
+transport.ssl.resolve_hostname: false
 
 plugins.security.ssl.http.enabled: true
 plugins.security.ssl.http.pemkey_filepath: "{{ osearch_ssl_key_path | basename }}"
@@ -61,7 +62,6 @@ plugins.security.ssl.http.pemtrustedcas_filepath: "{{ osearch_ssl_ca_path | base
 plugins.security.ssl.http.clientauth_mode: "{{ osearch_ssl_clientauth_mode | default('')}}"
 
 plugins.security.nodes_dn:
-  - CN={{cluster_name}}-*.{{cluster_vars.dns_user_domain}},DC={{cluster_vars.dns_user_domain}}
+  - CN={{cluster_name}}-*.{{cluster_vars.dns_domain}},DC={{cluster_vars.dns_domain}}
 plugins.security.authcz.admin_dn:
-  - CN=admin,DC={{cluster_vars.dns_user_domain}}
-
+  - CN=admin,DC={{cluster_vars.dns_domain}}

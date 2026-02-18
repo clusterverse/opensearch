@@ -4,10 +4,10 @@
   debug: msg="{{hosts_to_remove | default([])}}"
 
 - set_fact:
-    hosts_to_remove_opensearch: "{{hosts_to_remove | json_query(\"[?contains(['data','master'], tagslabels.hosttype)]\")}}"
+    hosts_to_remove_opensearch: "{{hosts_to_remove | json_query(\"[?contains(['data','master','ml'], tagslabels.cv__hosttype)]\")}}"
 
 - set_fact:
-    hosts_to_remove_dashboards: "{{hosts_to_remove | json_query(\"[?contains(['dashboards'], tagslabels.hosttype)]\")}}"
+    hosts_to_remove_dashboards: "{{hosts_to_remove | json_query(\"[?contains(['dashboards'], tagslabels.cv__hosttype)]\")}}"
 
 - name: opensearch/redeploy_predelete | delegate data/master nodes to opensearch predelete function
   include_role:

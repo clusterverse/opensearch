@@ -1,5 +1,5 @@
 [Unit]
-Description=dashboards-{{cluster_name}}_{{ansible_hostname}}
+Description=dashboards-{{cluster_name}}_{{ansible_facts['hostname']}}
 Documentation=https://www.opensearch.co
 Wants=network-online.target
 After=network-online.target

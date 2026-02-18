@@ -15,7 +15,9 @@
         key_usage_critical: true
         extended_key_usage: ["clientAuth"]
         extended_key_usage_critical: true
-        subject_ordered: [ { DC: "{{cluster_vars.dns_user_domain}}" }, { CN: "admin" } ]    #NOTE: Order is important for comparison with plugins.security.authcz.admin_dn definition in opensearch.yml (it is reversed).  If this is out of order, you get "Illegal parameter in http or transport request found" in the logs, and no inter-node connection.
+        subject_ordered:        #NOTE: Order is important for comparison with plugins.security.authcz.admin_dn definition in opensearch.yml (it is reversed).  If this is out of order, you get "Illegal parameter in http or transport request found" in the logs, and no inter-node connection.
+          - { DC: "{{ cluster_vars.dns_domain }}" }
+          - { CN: "admin" }
         use_common_name_for_san: false
       register: r__openssl_csr_pipe__admin
 
@@ -45,15 +47,18 @@
         key_usage_critical: true
         extended_key_usage: ["clientAuth", "serverAuth"]
         extended_key_usage_critical: true
-        subject_ordered: [ { DC: "{{cluster_vars.dns_user_domain}}" }, { CN: "{{ansible_hostname}}.{{cluster_vars.dns_user_domain}}" } ]    #NOTE: Order is important for comparison with plugins.security.nodes_dn definition in opensearch.yml (it is reversed).  If this is out of order, you get "Illegal parameter in http or transport request found" in the logs, and no inter-node connection.
+        subject_ordered:        #NOTE: Order is important for comparison with plugins.security.nodes_dn definition in opensearch.yml (it is reversed).  If this is out of order, you get "Illegal parameter in http or transport request found" in the logs, and no inter-node connection.
+          - { DC: "{{ cluster_vars.dns_domain }}" }
+          - { CN: "{{ ansible_facts['hostname'] ~ '.' ~ cluster_vars.dns_domain }}" }
+        use_common_name_for_san: false
         subject_alt_name: |-
-          {%- set SANs = ['DNS:' + ansible_hostname,'IP:' + ansible_default_ipv4.address] -%}
-          {%- if (cluster_vars.dns_user_domain is defined  and  cluster_vars.dns_user_domain != "") -%}
-            {%- set _ = SANs.append('DNS:' + ansible_hostname | regex_replace('-(?!.*-).*') + '.' + cluster_vars.dns_user_domain) -%}
-            {%- set _ = SANs.append('DNS:' + ansible_hostname + '.' + cluster_vars.dns_user_domain) -%}
+          {%- set SANs = ['DNS:' + ansible_facts['hostname'],'IP:' + ansible_facts['default_ipv4']['address']] -%}
+          {%- if (cluster_vars.dns_nameserver_zone is truthy) -%}
+            {%- set SANs = SANs + ['DNS:' + ansible_facts['hostname'] | regex_replace('-(?!.*-).*') + '.' + cluster_vars.dns_domain] -%}
+            {%- set SANs = SANs + ['DNS:' + ansible_facts['hostname'] + '.' + cluster_vars.dns_domain] -%}
           {%- endif -%}
-          {%- if (ansible_default_ipv4.address != ansible_host) -%}
-            {%- set _ = SANs.append('IP:' + ansible_host) -%}
+          {%- if (ansible_facts['default_ipv4']['address'] != ansible_host) -%}
+            {%- set SANs = SANs + ['IP:' + ansible_host] -%}
           {%- endif -%}
           {{ SANs }}
       register: r__openssl_csr_pipe

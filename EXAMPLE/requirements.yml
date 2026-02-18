@@ -1,20 +1,19 @@
 ---
 
 roles:
-  - name: clusterverse
-    src: https://github.com/dseeley/clusterverse
-    version: master
-
   - name: opensearch
-    src: https://github.com/dseeley/opensearch_ansible
+    src: https://github.com/clusterverse/opensearch
     version: master
 
 collections:
-  - name: dseeley.nested_playbook
+  - name: clusterverse.clusterverse
+    version: ">=4.0.8,<5.0.0"
     source: https://galaxy.ansible.com
 
   - name: dseeley.tasks_serial
+    version: ">=1.0.0,<2.0.0"
     source: https://galaxy.ansible.com
 
   - name: dseeley.ansible_vault_pipe
+    version: ">=1.0.0,<2.0.0"
     source: https://galaxy.ansible.com

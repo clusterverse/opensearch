@@ -22,11 +22,10 @@
         extended_key_usage_critical : true
         subject: |
           {%- set subj = {"OU": "CA"} -%}
-          {%- if 'dns_user_domain' in cluster_vars and cluster_vars.dns_user_domain!="" -%}
-            {%- set _ = subj.update({"DC": cluster_vars.dns_user_domain }) -%}
-            {%- set _ = subj.update({"CN": "root.ca."+cluster_vars.dns_user_domain }) -%}
+          {%- if (cluster_vars.dns_domain is truthy) -%}
+            {%- set subj = { "DC": cluster_vars.dns_domain, "CN": "root.ca."+cluster_vars.dns_domain, "OU": "CA" } -%}
           {%- endif -%}
-          {{subj}}
+          {{ subj }}
         use_common_name_for_san: false
       register: r__openssl_csr_pipe
 

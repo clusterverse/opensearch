@@ -2,15 +2,14 @@
 
 redeploy_schemes_supported: ['_scheme_addallnew_rmdisk_rollback']
 
-pkgupdate: on_create
-reboot_on_package_upgrade: true
+#pkgupdate: "on_create"                                  # "always" or "on_create".  Leave empty to prevent updating packages.
+#omit_singleton_hosttype_from_hostname: true             # Don't need the hosttype in the hostname (e.g. 'mongo-dev-mongod-a0' vs 'mongo-dev-a0')
 
 app_name: "opensearch-{{lookup('pipe', 'whoami') | lower}}"      # The name of the application cluster (e.g. 'couchbase', 'nginx'); becomes part of cluster_name.  Provided is a default to ensure no accidental overwriting.
-app_class: "observability"                              # The class of application (e.g. 'database', 'webserver'); becomes part of the fqdn
 
-cluster_name: "{{app_name}}-{{buildenv}}"               # Identifies the cluster within the cloud environment
+cluster_name: "{{app_name}}-{{buildenv}}"               # Identifies the cluster within the cloud environment; becomes part of the hostname
 
 cluster_vars:
   custom_tagslabels:
-    cv__environment: "{{buildenv}}"
-    cv__owner: "{{ lookup('env','USER') | lower }}"
+    environment: "{{buildenv}}"
+    owner: "{{ lookup('pipe', 'whoami') | lower }}"

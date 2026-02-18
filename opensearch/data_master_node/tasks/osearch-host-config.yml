@@ -4,11 +4,11 @@
 #  become: true
 #  blockinfile:
 #    dest: "/etc/hosts"
-#    block: "{{ hostvars | json_query(\"*.join(' ', [ansible_default_ipv4.address, ansible_hostname])\") | sort | join('\n') }}"
+#    block: "{{ hostvars | json_query(\"*.join(' ', [ansible_facts['default_ipv4']['address'], ansible_facts['hostname']])\") | sort | join('\n') }}"
 #    state: present
 #    create: true
 #    marker: "# Ansible inventory hosts {mark}"
-#  when: (cluster_vars.dns_server is not defined  or  cluster_vars.dns_server == '')  or  (cluster_vars.dns_user_domain is not defined  or  cluster_vars.dns_user_domain == "")
+#  when: (cluster_vars.dns_server is not defined  or  cluster_vars.dns_server == '')  or  (cluster_vars.dns_domain is not defined  or  cluster_vars.dns_domain == "")
 
 - name: opensearch/host-config | swap disabling
   block:

@@ -1,37 +1,51 @@
+# Copyright OpenSearch Contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# The OpenSearch Contributors require contributions made to
+# this file be licensed under the Apache-2.0 license or a
+# compatible open source license.
+
+# Description:
+# Default opensearch.service file
+
 [Unit]
-Description=opensearch-{{ansible_hostname}}
-Documentation=https://opensearch.org
+Description=OpenSearch-{{ansible_facts['hostname']}}
+Documentation=https://opensearch.org/
 Wants=network-online.target
 After=network-online.target
 
 [Service]
 RuntimeDirectory=opensearch
 PrivateTmp=true
-Environment=OSEARCH_HOME={{osearch_home}}
-Environment=OSEARCH_PATH_CONF={{osearch_conf_dir}}
-Environment=PID_DIR={{osearch_pid_dir}}
-Environment=ES_SD_NOTIFY=true
-EnvironmentFile=-/etc/default/opensearch
 
 WorkingDirectory={{osearch_home}}
 
 User={{osearch_user}}
 Group={{osearch_group}}
 
-ExecStart={{osearch_home}}/bin/opensearch -p ${PID_DIR}/opensearch.pid --quiet
+#ExecStartPre=/bin/mkdir -p /dev/shm/performanceanalyzer
+#ExecStartPre=/bin/chown {{osearch_user}}:{{osearch_group}} /dev/shm/performanceanalyzer
+
+ExecStart={{osearch_home}}/bin/opensearch -p {{ osearch_pid_dir }}/opensearch.pid --quiet
 
 # StandardOutput is configured to redirect to journalctl since
 # some error messages may be logged in standard output before
-# opensearch logging system is initialized. opensearch
+# opensearch logging system is initialized. OpenSearch
 # stores its logs in /var/log/opensearch and does not use
 # journalctl by default. If you also want to enable journalctl
 # logging, you can simply remove the "quiet" option from ExecStart.
 StandardOutput=journal
 StandardError=inherit
+SyslogIdentifier=opensearch
 
 # Specifies the maximum file descriptor number that can be opened by this process
-{% if osearch_max_open_files is defined %}
-LimitNOFILE={{osearch_max_open_files}}
+LimitNOFILE={{osearch_max_open_files | default(65535)}}
+
+# Specifies the maximum number of bytes of memory that may be locked into RAM
+# Set to "infinity" if you use the 'bootstrap.memory_lock: true' option
+# in opensearch.yml and 'MAX_LOCKED_MEMORY=unlimited' in instance_default_file
+{% if osearch_extra_config['bootstrap.memory_lock'] is defined and osearch_extra_config['bootstrap.memory_lock'] == True %}
+    LimitMEMLOCK=infinity
 {% endif %}
 
 # Specifies the maximum number of processes
@@ -42,13 +56,6 @@ LimitAS=infinity
 
 # Specifies the maximum file size
 LimitFSIZE=infinity
-
-# Specifies the maximum number of bytes of memory that may be locked into RAM
-# Set to "infinity" if you use the 'bootstrap.memory_lock: true' option
-# in opensearch.yml and 'MAX_LOCKED_MEMORY=unlimited' in instance_default_file
-{% if osearch_extra_config['bootstrap.memory_lock'] is defined and osearch_extra_config['bootstrap.memory_lock'] == True %}
-LimitMEMLOCK=infinity
-{% endif %}
 
 # Disable timeout logic and wait until process is stopped
 TimeoutStopSec=0
@@ -67,6 +74,109 @@ SuccessExitStatus=143
 
 # Allow a slow startup before the systemd notifier module kicks in to extend the timeout
 TimeoutStartSec=75
+
+# Prevent modifications to the control group filesystem
+ProtectControlGroups=true
+
+# Prevent loading or reading kernel modules
+ProtectKernelModules=true
+
+# Prevent altering kernel tunables (sysctl parameters)
+ProtectKernelTunables=true
+
+# Set device access policy to 'closed', allowing access only to specific devices
+DevicePolicy=closed
+
+# Make /proc invisible to the service, enhancing isolation
+ProtectProc=invisible
+
+# Make /usr, /boot, and /etc read-only (less restrictive than 'strict')
+ProtectSystem=full
+
+# Prevent changes to control groups (redundant with earlier setting, can be removed)
+ProtectControlGroups=yes
+
+# Prevent changing the execution domain
+LockPersonality=yes
+
+
+# System call filterings which restricts which system calls a process can make
+# @ means predefined sets
+# ~ means not allowed
+# These syscalls are related to mmap which is needed for OpenSearch Services
+SystemCallFilter=seccomp mincore
+SystemCallFilter=madvise mlock mlock2 munlock get_mempolicy sched_getaffinity sched_setaffinity fcntl
+SystemCallFilter=@system-service
+SystemCallFilter=~@reboot
+SystemCallFilter=~@swap
+
+SystemCallErrorNumber=EPERM
+
+# Capability restrictions
+# Remove the ability to block system suspends
+CapabilityBoundingSet=~CAP_BLOCK_SUSPEND
+
+# Remove the ability to establish leases on files
+CapabilityBoundingSet=~CAP_LEASE
+
+# Remove the ability to use system resource accounting
+CapabilityBoundingSet=~CAP_SYS_PACCT
+
+# Remove the ability to configure TTY devices
+CapabilityBoundingSet=~CAP_SYS_TTY_CONFIG
+
+# Remov below capabilities:
+# - CAP_SYS_ADMIN: Various system administration operations
+# - CAP_SYS_PTRACE: Ability to trace processes
+# - CAP_NET_ADMIN: Various network-related operations
+CapabilityBoundingSet=~CAP_SYS_ADMIN ~CAP_SYS_PTRACE ~CAP_NET_ADMIN
+
+
+# Address family restrictions
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# Filesystem Access
+
+ReadWritePaths= {{ osearch_log_dir }}
+ReadWritePaths= {{ osearch_data_dir }}
+ReadWritePaths=/dev/shm/
+ReadWritePaths=-/etc/opensearch
+ReadWritePaths=-/mnt/snapshots
+
+## Allow read access to system files
+ReadOnlyPaths=-/etc/os-release -/usr/lib/os-release -/etc/system-release
+
+## Allow read access to Linux IO stats
+ReadOnlyPaths=/proc/self/mountinfo /proc/diskstats
+
+## Allow read access to control group stats
+ReadOnlyPaths=/proc/self/cgroup /sys/fs/cgroup/cpu /sys/fs/cgroup/cpu/-
+ReadOnlyPaths=/sys/fs/cgroup/cpuacct /sys/fs/cgroup/cpuacct/- /sys/fs/cgroup/memory /sys/fs/cgroup/memory/-
+ReadOnlyPaths=/sys/fs/cgroup/system.slice/-
+
+
+RestrictNamespaces=true
+
+NoNewPrivileges=true
+
+# Memory and execution protection
+
+# Allow only native system calls
+SystemCallArchitectures=native
+# Service does not share key material with other services
+KeyringMode=private
+# Prevent changing ABI personality
+LockPersonality=true
+# Prevent creating SUID/SGID files
+RestrictSUIDSGID=true
+# Prevent acquiring realtime scheduling
+RestrictRealtime=true
+# Prevent changes to system hostname
+ProtectHostname=true
+# Prevent reading/writing kernel logs
+ProtectKernelLogs=true
+# Prevent tampering with the system clock
+ProtectClock=true
 
 [Install]
 WantedBy=multi-user.target

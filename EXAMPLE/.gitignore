@@ -6,7 +6,7 @@ inventory_*
 venv
 *.pyc
 Pipfile.lock
-roles/clusterverse
+roles/opensearch
 /collections/
 /gcp__*.json
 id_rsa*

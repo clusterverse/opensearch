@@ -3,15 +3,15 @@
 - name: opensearch/osearch-static-config | Create pid, log and conf directories
   become: true
   file:
-    path: "{{ item }}"
+    path: "{{ item.path }}"
     state: directory
     owner: "{{osearch_user}}"
     group: "{{osearch_group}}"
-    mode: "2755"
+    mode: "{{ item.mode }}"
   with_items:
-    - "{{osearch_pid_dir}}"
-    - "{{osearch_log_dir}}"
-    - "{{osearch_conf_dir}}"
+    - { path: '{{osearch_pid_dir}}', mode: '2755'}
+    - { path: '{{osearch_log_dir}}', mode: '2755'}
+    - { path: '{{osearch_conf_dir}}', mode: '0700'}
 
 #Create data directory if mountpoint doesn't exist already
 - name: opensearch/osearch-static-config | Create data dir if it doesn't exist
@@ -46,7 +46,7 @@
     force: true
   notify: restart opensearch
   vars:
-    osearch_heap_size: "{{ (ansible_memtotal_mb / 2) | round | int | abs }}m"
+    osearch_heap_size: "{{ (ansible_facts['memtotal_mb'] / 2) | round | int | abs }}m"
 
 - name: opensearch/osearch-static-config | Create main opensearch config file
   become: true
@@ -76,7 +76,7 @@
   copy:
     content: |
       {% for node in master_eligible_nodes %}
-      {{ node['hostname'] + '.' + cluster_vars.dns_user_domain if (cluster_vars.inventory_ip=='private' and cluster_vars.dns_server is defined and cluster_vars.dns_server != "") else hostvars[node['hostname']]['ansible_default_ipv4']['address'] }}
+      {{ node['hostname'] + '.' + cluster_vars.dns_domain if (cluster_vars.inventory_ip=='private' and cluster_vars.dns_server is defined and cluster_vars.dns_server != "") else hostvars[node['hostname']]['ansible_facts']['default_ipv4']['address'] }}
       {% endfor %}
     dest: "{{osearch_conf_dir}}/unicast_hosts.txt"
     owner: "{{osearch_user}}"

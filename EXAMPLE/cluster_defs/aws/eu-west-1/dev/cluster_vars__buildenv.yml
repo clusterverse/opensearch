@@ -2,56 +2,51 @@
 
 cluster_vars:
   dev:
-    aws_access_key: !vault |
-      $ANSIBLE_VAULT;1.1;AES256
-      7669080460651349243347331538721104778691266429457726036813912140404310
-    aws_secret_key: !vault |
-      $ANSIBLE_VAULT;1.1;AES256
-      7669080460651349243347331538721104778691266429457726036813912140404310
+    # Several options for credentials: Provide AWS key/secrets here; use an IAM role to switch to; use the environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY; use the AWS_PROFILE environment variable (with ~/.aws/credentials or ~/.aws/config file)
+    aws_access_key: ""
+    aws_secret_key: ""
+#    aws_sts_assume_role_arn: "arn:aws:iam::000000000000:role/MyRole"               # NOTE: Can only set aws_sts_assume_role_arn if aws_secret_key is not set
     ssh_connection_cfg:
       host: &host_ssh_connection_cfg
         ansible_user: "ansible"
-        ansible_ssh_private_key_file: !vault |
-          $ANSIBLE_VAULT;1.1;AES256
-          7669080460651349243347331538721104778691266429457726036813912140404310
+        ansible_ssh_private_key_contents: "{{ lookup('env', 'ANSIBLE_SSH_PRIVATE_KEY_CONTENTS') | default ('') }}"    # NOTE: This can either be sourced from environment (ANSIBLE_SSH_PRIVATE_KEY_CONTENTS), or defined inline here (perhaps vaulted).  Alternatively this can be omitted and --private-key=<privkeyfile> (which creates the ansible variable 'ansible_ssh_private_key_file') can be used on the command line.
 #      bastion:
-#        ssh_args: '-o ProxyCommand="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ./id_rsa_bastion -W %h:%p -q user@192.168.0.1"'
-#        ssh_priv_key: !vault |
-#          $ANSIBLE_VAULT;1.2;AES256;dev
-#          7669080460651349243347331538721104778691266429457726036813912140404310
+#        ssh_args (proxy_only): "{{ ((' -o ProxyCommand=\"nc -X connect -x ' ~ (lookup('env', 'HTTP_PROXY') | regex_replace('^https?://', '')) ~ ' %h %p\"') if lookup('env', 'HTTP_PROXY') != '' else '') }}"
+#        ssh_args (bastion_only): '-o ProxyCommand="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ./id_rsa_bastion -W %h:%p -q user@bastion.example.com"'
+#        ssh_args (bastion_and_proxy): "{{ '-o ProxyCommand=\"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ./id_rsa_bastion' ~ ((' -o ProxyCommand=\\\"nc -X connect -x ' ~ (lookup('env', 'HTTP_PROXY') | regex_replace('^https?://', '')) ~ ' bastion.example.com 22\\\"') if lookup('env', 'HTTP_PROXY') != '' else '') ~ ' user@bastion.example.com -W %h:%p\"' }}"
+#        ssh_priv_key: "{{ lookup('env', 'BASTION_SSH_PRIVATE_KEY_CONTENTS') | default ('') }}"       # NOTE: This can either be sourced from environment (BASTION_SSH_PRIVATE_KEY_CONTENTS), or defined inline here (perhaps vaulted).
     vpc_name: "{{buildenv}}"
     vpc_subnet_name_prefix: "{{buildenv}}-public-{{region}}"
     key_name: "aws_ansible__id_rsa"
     termination_protection: "no"
-#    nsupdate_cfg: {server: "", key_name: "", key_secret: ""}      # If you're using bind9 (or other nsupdate-compatible 'dns_server')
 
     hosttype_vars:
       master:
         auto_volumes:
-          - { device_name: "/dev/sda1", mountpoint: "/", fstype: "ext4", volume_type: "gp3", volume_size: 8, encrypted: True, delete_on_termination: true }
-          - { device_name: "/dev/sdf", mountpoint: "{{osearch_data_dir}}", fstype: "ext4", volume_type: "gp3", volume_size: 2, encrypted: True, delete_on_termination: true }
+          - { device_name: "/dev/sda1", mountpoint: "/", fstype: "ext4", volume_type: "gp3", volume_size: 8, encrypted: true, delete_on_termination: true }
+          - { device_name: "/dev/sdf", mountpoint: "{{osearch_data_dir}}", fstype: "ext4", volume_type: "gp3", volume_size: 2, encrypted: true, delete_on_termination: true }
         flavor: t4g.small
         version: "{{osearch_version | regex_replace('\\.', '_') | default('')}}"
         vms_by_az: { a: 1, b: 1, c: 1 }
 
       data:
         auto_volumes:
-          - { device_name: "/dev/sda1", mountpoint: "/", fstype: "ext4", volume_type: "gp3", volume_size: 8, encrypted: True, delete_on_termination: true }
-          - { device_name: "/dev/sdf", mountpoint: "{{osearch_data_dir}}", fstype: "ext4", volume_type: "gp3", volume_size: 8, encrypted: True, delete_on_termination: true }
+          - { device_name: "/dev/sda1", mountpoint: "/", fstype: "ext4", volume_type: "gp3", volume_size: 8, encrypted: true, delete_on_termination: true }
+          - { device_name: "/dev/sdf", mountpoint: "{{osearch_data_dir}}", fstype: "ext4", volume_type: "gp3", volume_size: 8, encrypted: true, delete_on_termination: true }
         flavor: t4g.medium
         version: "{{osearch_version | regex_replace('\\.', '_') | default('')}}"
         vms_by_az: { a: 1, b: 1, c: 1 }
 
       ml:
         auto_volumes:
-          - { device_name: "/dev/sda1", mountpoint: "/", fstype: "ext4", volume_type: "gp3", volume_size: 8, encrypted: True, delete_on_termination: true }
+          - { device_name: "/dev/sda1", mountpoint: "/", fstype: "ext4", volume_type: "gp3", volume_size: 8, encrypted: true, delete_on_termination: true }
         flavor: t4g.large
         version: "{{osearch_version | regex_replace('\\.', '_') | default('')}}"
-        vms_by_az: { a: 1, b: 1, c: 1 }
+        vms_by_az: { a: 1, b: 0, c: 0 }
 
       dashboards:
         auto_volumes:
-          - { device_name: "/dev/sda1", mountpoint: "/", fstype: "ext4", volume_type: "gp3", volume_size: 8, encrypted: True, delete_on_termination: true }
+          - { device_name: "/dev/sda1", mountpoint: "/", fstype: "ext4", volume_type: "gp3", volume_size: 8, encrypted: true, delete_on_termination: true }
         flavor: t4g.small
         version: "{{dashboards_version | regex_replace('\\.', '_') | default('')}}"
         vms_by_az: { a: 1, b: 0, c: 0 }

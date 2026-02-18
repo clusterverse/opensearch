@@ -25,7 +25,16 @@
     group: "{{osearch_group}}"
     mode: 0644
 
-- name: opensearch/osearch-security-accesscontrol | Check blowfish (bcrypt) is installed.  If not, install 'passlib' and 'bcrypt'
+- name: opensearch/osearch-security-accesscontrol | Install blowfish (bcrypt) and passlib on localhost (if we can't do this, e.g. localhost user doesn't have sudo, don't fail)
+  become: true
+  delegate_to: localhost
+  apt:
+    name: [ 'python3-bcrypt', 'python3-passlib' ]
+    update_cache: True
+  ignore_errors: true
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: opensearch/osearch-security-accesscontrol | Check blowfish (bcrypt) is installed.  If not, ask user to install 'passlib' and 'bcrypt'
   assert: { that: "'0' | password_hash('blowfish') | length>10", fail_msg: "blowfish (bcrypt) is not installed.  Please install 'passlib' and 'bcrypt'", success_msg: "blowfish installed" }
 
 - name: opensearch/osearch-security-accesscontrol | Add static users

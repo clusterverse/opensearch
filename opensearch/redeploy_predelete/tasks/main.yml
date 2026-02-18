@@ -98,7 +98,7 @@
           copy:
             content: |
               {% for hostname in master_hostnames_to_keep %}
-              {{ hostname + '.' + cluster_vars.dns_user_domain if (cluster_vars.inventory_ip=='private' and cluster_vars.dns_server is defined and cluster_vars.dns_server != "") else hostvars[hostname]['ansible_default_ipv4']['address'] }}
+              {{ hostname + '.' + cluster_vars.dns_user_domain if (cluster_vars.inventory_ip=='private' and cluster_vars.dns_server is defined and cluster_vars.dns_server != "") else hostvars[hostname]['ansible_facts']['default_ipv4']['address'] }}
               {% endfor %}
             dest: "{{osearch_conf_dir}}/unicast_hosts.txt"
             owner: "{{osearch_user}}"
