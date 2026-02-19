@@ -124,7 +124,7 @@
         state: stopped
       delegate_to: "{{item}}"
       loop: "{{hostnames_to_remove}}"
-      when: "'opensearch.service' in hostvars[item]['services']"
+      when: "'opensearch.service' in hostvars[item]['ansible_facts']['services']"
 
     - block:
         - name: opensearch/redeploy_predelete | Delete the voting_config_exclusions (make all eligible again)

@@ -26,7 +26,7 @@ server.maxPayloadBytes: 5242880
 server.name: "{{inventory_hostname}}"
 
 # The URLs of the OpenSearch instances to use for all your queries.
-opensearch.hosts: {{ ((master_eligible_nodes | map(attribute='hostname') | map('regex_replace', '^(.*)$', '\\1.' + cluster_vars.dns_domain)) if (cluster_vars.inventory_ip=='private' and cluster_vars.dns_server is defined and cluster_vars.dns_server != "")  else  (master_eligible_nodes | map(attribute='hostname') | map('extract', hostvars, 'ansible_default_ipv4') | map(attribute='address'))) | map('regex_replace', '^(.*)$', 'https://' + '\\1' + ':9200') }}
+opensearch.hosts: {{ (( (groups['data'] | difference(hosts_to_remove_opensearch | default([]) | map(attribute='name'))) | map('regex_replace', '^(.*)$', '\\1.' + cluster_vars.dns_domain)) if (cluster_vars.dns_server is truthy and cluster_vars.dns_domain is truthy)  else  ((groups['data'] | difference(hosts_to_remove_opensearch | default([]) | map(attribute='name'))) | map('extract', hostvars, 'ansible_host') | list)) | map('regex_replace', '^(.*)$', 'https://' + '\\1' + ':9200') }}
 
 # OpenSearch Dashboards uses an index in OpenSearch to store saved searches, visualizations and
 # dashboards. OpenSearch Dashboards creates a new index if the index doesn't already exist.
