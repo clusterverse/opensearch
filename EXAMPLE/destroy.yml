@@ -1,6 +1,6 @@
 ---
 
-- name: clusterverse/redeploy | Redeploy the cluster
+- name: clusterverse/destroy | Destroy the cluster
   hosts: localhost
   gather_facts: false
   tasks:
@@ -8,14 +8,12 @@
       vars: { galaxy_collections: "{{lookup('pipe', 'ansible-galaxy collection list --format=json', errors='ignore') | from_json | json_query('*') | combine }}" }
       tags: ["always"]
 
-    - name: clusterverse/redeploy | Run redeploy
+    - name: clusterverse/destroy | clusterverse.destroy (set destroy_lifecycle=_all_ as default - can be overridden by command line '-e destroy=...')
       include_role:
-        name: clusterverse.clusterverse.redeploy
-      vars:
-        deployplaybook: "deploy.yml"
-        predeleterole: "opensearch/_redeploy_predelete"
+        name: "clusterverse.clusterverse.destroy"
+      vars: { destroy_lifecycle: _all_ }
 
-- name: clusterverse/redeploy | clusterverse.readiness
-  hosts: localhost
-  gather_facts: false
-  tasks: [ { name: "clusterverse/redeploy | clusterverse.readiness/clean_tmp", include_role: { name: "clusterverse.clusterverse.readiness", tasks_from: "clean_tmp.yml"}} ]
+    - name: clusterverse/redeploy | clusterverse.readiness/clean_tmp
+      include_role:
+        name: "clusterverse.clusterverse.readiness"
+        tasks_from: "clean_tmp.yml"

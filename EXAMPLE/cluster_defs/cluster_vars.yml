@@ -1,9 +1,11 @@
 ---
 
 redeploy_schemes_supported: ['_scheme_addallnew_rmdisk_rollback']
+redeploy_scheme: "_scheme_addallnew_rmdisk_rollback"
+canary: none
+canary_tidy_on_success: true
 
-#pkgupdate: "on_create"                                  # "always" or "on_create".  Leave empty to prevent updating packages.
-#omit_singleton_hosttype_from_hostname: true             # Don't need the hosttype in the hostname (e.g. 'mongo-dev-mongod-a0' vs 'mongo-dev-a0')
+update_os: true                                         # A variable passed to the cloud-init user-data script (or the startup-script for GCP), to indicate that it can run any user-defined run_cmd (apt-get -y dist-upgrade).
 
 app_name: "opensearch-{{lookup('pipe', 'whoami') | lower}}"      # The name of the application cluster (e.g. 'couchbase', 'nginx'); becomes part of cluster_name.  Provided is a default to ensure no accidental overwriting.
 
